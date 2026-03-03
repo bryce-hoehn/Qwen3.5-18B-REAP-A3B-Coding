@@ -1,0 +1,76 @@
+cluster_args:
+  cluster_description: null
+  cluster_method: agglomerative
+  compression_ratio: 0.5
+  expert_sim: ttm
+  frequency_penalty: true
+  linkage_method: average
+  max_cluster_size: null
+  multi_layer: null
+  num_clusters: null
+  singleton_outlier_experts: false
+  singleton_super_experts: false
+  softmax_temperature: null
+ds_args:
+  dataset_config_name: all
+  dataset_name: 0xSero/glm47-reap-calibration-v2
+  dataset_test_split: test
+  shuffle: true
+  split: train
+eval_args:
+  evalplus_tasks:
+  - mbpp
+  - humaneval
+  greedy: true
+  lm_eval_tasks:
+  - winogrande
+  - arc_challenge
+  - arc_easy
+  - boolq
+  - hellaswag
+  - mmlu
+  - openbookqa
+  - rte
+  min_p: 0.0
+  parallel_tasks: 32
+  results_dir: null
+  run_evalplus: true
+  run_livecodebench: true
+  run_lm_eval: true
+  run_math: false
+  run_wildbench: false
+  server_log_file_name: pruning-cli-0.log
+  temperature: 0.7
+  top_k: 20
+  top_p: 0.8
+  use_server: true
+  vllm_port: 8000
+model_args:
+  model_name: Qwen/Qwen3.5-35B-A3B
+  num_experts_per_tok_override: null
+obs_args:
+  distance_measure: cosine
+  model_max_length: 2048
+  output_file_name: observations_1024_cosine-seed_42.pt
+  overwrite_observations: false
+  record_pruning_metrics_only: true
+  renormalize_router_weights: false
+  return_vllm_tokens_prompt: false
+  samples_per_category: 1024
+  select_only_categories: null
+  split_by_category: false
+  truncate: false
+prune_args:
+  n_experts_to_prune: null
+  overwrite_pruned_model: false
+  perserve_outliers: false
+  perserve_super_experts: false
+  prune_method: reap
+reap_args:
+  debug: false
+  do_eval: false
+  plot_clusters: true
+  profile: false
+  run_observer_only: false
+  seed: 42
+  smoke_test: true
