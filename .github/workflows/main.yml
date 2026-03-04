@@ -1,0 +1,76 @@
+name: Build GGUFs
+
+on:
+  workflow_dispatch:
+
+jobs:
+  build:
+    name: Build
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Install system dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y cmake build-essential
+
+      - name: Install huggingface-cli
+        run: |
+          curl -LsSf https://hf.co/cli/install.sh | bash
+          echo "$HOME/.local/bin" >> $GITHUB_PATH
+
+      - name: Install uv
+        run: |
+          curl -LsSf https://astral.sh/uv/install.sh | sh
+          echo "$HOME/.local/bin" >> $GITHUB_PATH
+
+      - name: Download llama.cpp
+        run: git clone https://github.com/ggml-org/llama.cpp
+
+      - name: Build llama.cpp (quantize tool)
+        run: |
+          cd llama.cpp
+          cmake -B build
+          cmake --build build --config Release -j $(nproc)
+
+      - name: Create output directory
+        run: mkdir -p $GITHUB_WORKSPACE/gguf
+
+      - name: Install Python dependencies for conversion
+        run: |
+          uv venv
+          source .venv/bin/activate
+          uv pip install -r llama.cpp/requirements.txt
+
+      - name: Convert model to F16 GGUF
+        run: |
+          source .venv/bin/activate
+          uv run llama.cpp/convert-hf-to-gguf.py \
+            "$GITHUB_WORKSPACE" \
+            --outfile $GITHUB_WORKSPACE/Qwen3.5-18B-REAP-A3B-Coding-F16.gguf \
+            --outtype f16
+
+      - name: Build quants
+        run: |
+          QUANTS=(
+            "Q2_K" "Q3_K_M" "Q4_0" "Q4_1" "Q4_K_M" "Q5_0" "Q5_1" "Q5_K_M" "Q6_K" "Q8_0"
+          )
+          for quant in "${QUANTS[@]}"; do
+            echo "Quantizing to $quant ..."
+            ./llama.cpp/build/bin/quantize \
+              $GITHUB_WORKSPACE/gguf/Qwen3.5-18B-REAP-A3B-Coding-F16.gguf \
+              $GITHUB_WORKSPACE/gguf/Qwen3.5-18B-REAP-A3B-Coding-${quant}.gguf \
+              ${quant}
+          done
+
+      - name: Upload GGUF files to Hugging Face
+        env:
+          HF_TOKEN: ${{ secrets.HF_TOKEN }}
+        run: |
+          hf upload \
+            --token $HF_TOKEN \
+            Flagstone8878/Qwen3.5-18B-REAP-A3B-Coding-GGUF \
+            $GITHUB_WORKSPACE/gguf/ \
+            --repo-type model
