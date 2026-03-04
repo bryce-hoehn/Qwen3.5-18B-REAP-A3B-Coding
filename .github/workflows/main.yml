@@ -44,12 +44,12 @@ jobs:
 
       - name: Create output directory
         run: mkdir -p $GITHUB_WORKSPACE/gguf
-
+      
       - name: Install Python dependencies for conversion
         run: |
           uv venv
           source .venv/bin/activate
-          uv pip install -r llama.cpp/requirements.txt
+          uv pip install --index-strategy unsafe-best-match -r llama.cpp/requirements.txt
 
       - name: Convert model to F16 GGUF
         run: |
