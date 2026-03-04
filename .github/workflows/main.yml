@@ -27,7 +27,7 @@ jobs:
           echo "$HOME/.local/bin" >> $GITHUB_PATH
 
       - name: Download llama.cpp
-        run: git clone https://github.com/ggml-org/llama.cpp $GITHUB_WORKSPACE
+        run: git clone https://github.com/ggml-org/llama.cpp
 
       - name: Cache llama.cpp build
         id: cache-llama
