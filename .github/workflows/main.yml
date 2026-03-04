@@ -27,7 +27,7 @@ jobs:
           echo "$HOME/.local/bin" >> $GITHUB_PATH
 
       - name: Download llama.cpp
-        run: git clone https://github.com/ggml-org/llama.cpp
+        run: git clone https://github.com/ggml-org/llama.cpp $GITHUB_WORKSPACE
 
       - name: Cache llama.cpp build
         id: cache-llama
@@ -49,7 +49,7 @@ jobs:
         run: |
           uv venv
           source .venv/bin/activate
-          uv pip install --index-strategy unsafe-best-match -r llama.cpp/requirements.txt
+          uv pip install --index-strategy unsafe-best-match -r $GITHUB_WORKSPACE/llama.cpp/requirements.txt
       
       - name: Convert model to F16 GGUF
         run: |
