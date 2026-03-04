@@ -50,6 +50,7 @@ jobs:
           uv venv
           source .venv/bin/activate
           uv pip install --index-strategy unsafe-best-match -r $GITHUB_WORKSPACE/llama.cpp/requirements.txt
+          uv pip install --upgrade transformers
       
       - name: Convert model to F16 GGUF
         run: |
