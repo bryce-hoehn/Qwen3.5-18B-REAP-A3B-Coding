@@ -29,7 +29,14 @@ jobs:
       - name: Download llama.cpp
         run: git clone https://github.com/ggml-org/llama.cpp
 
-      - name: Build llama.cpp (quantize tool)
+      - name: Cache llama.cpp build
+        id: cache-llama
+        uses: actions/cache@v4
+        with:
+          path: llama.cpp/build
+          key: llama-cpp-build-${{ runner.os }}
+
+      - name: Build llama.cpp (incremental)
         run: |
           cd llama.cpp
           cmake -B build
