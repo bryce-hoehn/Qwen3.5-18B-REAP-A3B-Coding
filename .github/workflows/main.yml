@@ -97,7 +97,9 @@ jobs:
             "$GITHUB_WORKSPACE/model" \
             --outfile "$GITHUB_WORKSPACE/Qwen3.5-18B-REAP-A3B-Coding-F16.gguf" \
             --outtype f16
-
+            
+      - name: Cleanup model
+        run: rm -rf "$GITHUB_WORKSPACE/model"
       # ------------------------------------------------------------
       - name: Build quants
         env:
