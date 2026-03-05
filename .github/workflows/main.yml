@@ -81,7 +81,6 @@ jobs:
             hf upload \
               --token $HF_TOKEN \
               Flagstone8878/Qwen3.5-18B-REAP-A3B-Coding-GGUF \
-              --local-path "$GITHUB_WORKSPACE/gguf/Qwen3.5-18B-REAP-A3B-Coding-${quant}.gguf" \
-              --repo-type model
+              "$GITHUB_WORKSPACE/gguf/Qwen3.5-18B-REAP-A3B-Coding-${quant}.gguf"
             rm -rf "$GITHUB_WORKSPACE/gguf/Qwen3.5-18B-REAP-A3B-Coding-${quant}.gguf"
           done
