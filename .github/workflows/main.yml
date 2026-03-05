@@ -8,11 +8,6 @@ jobs:
     name: Build
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-        with:
-          lfs: true
-          
       - name: Install system dependencies
         run: |
           sudo apt-get update
@@ -54,12 +49,18 @@ jobs:
           uv pip install --index-strategy unsafe-best-match -r $GITHUB_WORKSPACE/llama.cpp/requirements.txt
           uv pip install --upgrade transformers
       
+      - name: Download model from Hugging Face
+        run: |
+          hf download Flagstone8878/Qwen3.5-18B-REAP-A3B-Coding \
+            --local-dir ./model \
+            --local-dir-use-symlinks False
+      
       - name: Convert model to F16 GGUF
         run: |
           source .venv/bin/activate
           ls $GITHUB_WORKSPACE/llama.cpp
           uv run "$GITHUB_WORKSPACE/llama.cpp/convert_hf_to_gguf.py" \
-            "$GITHUB_WORKSPACE" \
+            "$GITHUB_WORKSPACE/model" \
             --outfile "$GITHUB_WORKSPACE/Qwen3.5-18B-REAP-A3B-Coding-F16.gguf" \
             --outtype f16
 
