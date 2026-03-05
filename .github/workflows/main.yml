@@ -70,7 +70,7 @@ jobs:
           )
           for quant in "${QUANTS[@]}"; do
             echo "Quantizing to $quant ..."
-            "$GITHUB_WORKSPACE/llama.cpp/build/bin/quantize" \
+            "$GITHUB_WORKSPACE/llama.cpp/build/bin/llama-quantize" \
               $GITHUB_WORKSPACE/gguf/Qwen3.5-18B-REAP-A3B-Coding-F16.gguf \
               $GITHUB_WORKSPACE/gguf/Qwen3.5-18B-REAP-A3B-Coding-${quant}.gguf \
               ${quant}
