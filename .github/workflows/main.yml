@@ -48,11 +48,15 @@ jobs:
           source .venv/bin/activate
           uv pip install --index-strategy unsafe-best-match -r $GITHUB_WORKSPACE/llama.cpp/requirements.txt
           uv pip install --upgrade transformers
-      
+          
       - name: Download model from Hugging Face
+        env:
+          HF_TOKEN: ${{ secrets.HF_TOKEN }}
         run: |
-          hf download Flagstone8878/Qwen3.5-18B-REAP-A3B-Coding --token $HF_TOKEN --local-dir ./model
-      
+          hf download bryce-hoehn/Qwen3.5-18B-REAP-A3B-Coding \
+            --token $HF_TOKEN \
+            --local-dir ./model \
+
       - name: Convert model to F16 GGUF
         run: |
           source .venv/bin/activate
