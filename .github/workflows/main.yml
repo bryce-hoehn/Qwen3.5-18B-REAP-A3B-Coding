@@ -13,74 +13,122 @@ jobs:
           sudo apt-get update
           sudo apt-get install -y cmake build-essential
 
-      - name: Install huggingface-cli
+      - name: Install huggingface-cli (hf) via pip
         run: |
-          curl -LsSf https://hf.co/cli/install.sh | bash
-          echo "$HOME/.local/bin" >> $GITHUB_PATH
+          python3 -m pip install --upgrade pip
+          pip install huggingface-hub
 
       - name: Install uv
         run: |
           curl -LsSf https://astral.sh/uv/install.sh | sh
           echo "$HOME/.local/bin" >> $GITHUB_PATH
 
-      - name: Download llama.cpp
+      # ------------------------------------------------------------
+      # Cache llama.cpp source
+      - name: Cache llama.cpp repo
+        id: cache-llama-repo
+        uses: actions/cache@v4
+        with:
+          path: llama.cpp
+          key: llama-cpp-repo-${{ runner.os }}
+
+      - name: Download llama.cpp (if not cached)
+        if: steps.cache-llama-repo.outputs.cache-hit != 'true'
         run: git clone https://github.com/ggml-org/llama.cpp
 
+      # ------------------------------------------------------------
+      # Cache llama.cpp build
       - name: Cache llama.cpp build
-        id: cache-llama
+        id: cache-llama-build
         uses: actions/cache@v4
         with:
           path: llama.cpp/build
-          key: llama-cpp-build-${{ runner.os }}
+          key: llama-cpp-build-${{ runner.os }}-${{ hashFiles('llama.cpp/CMakeLists.txt') }}
 
-      - name: Build llama.cpp (incremental)
+      - name: Build llama.cpp (if not cached)
+        if: steps.cache-llama-build.outputs.cache-hit != 'true'
         run: |
           cd llama.cpp
           cmake -B build
           cmake --build build --config Release -j $(nproc)
 
       - name: Create output directory
-        run: mkdir -p $GITHUB_WORKSPACE/gguf
-      
+        run: mkdir -p "$GITHUB_WORKSPACE/gguf"
+
       - name: Install Python dependencies for conversion
         run: |
           uv venv
           source .venv/bin/activate
-          uv pip install --index-strategy unsafe-best-match -r $GITHUB_WORKSPACE/llama.cpp/requirements.txt
+          uv pip install --index-strategy unsafe-best-match -r "$GITHUB_WORKSPACE/llama.cpp/requirements.txt"
           uv pip install --upgrade transformers
-          
-      - name: Download model from Hugging Face
+
+      # ------------------------------------------------------------
+      # Cache downloaded model
+      - name: Cache model from Hugging Face
+        id: cache-model
+        uses: actions/cache@v4
+        with:
+          path: ./model
+          key: model-Flagstone8878-Qwen3.5-18B-REAP-A3B-Coding
+
+      - name: Download model from Hugging Face (if not cached)
+        if: steps.cache-model.outputs.cache-hit != 'true'
         env:
           HF_TOKEN: ${{ secrets.HF_TOKEN }}
         run: |
           hf download Flagstone8878/Qwen3.5-18B-REAP-A3B-Coding \
-            --token $HF_TOKEN \
-            --local-dir ./model \
+            --token "$HF_TOKEN" \
+            --local-dir ./model
 
-      - name: Convert model to F16 GGUF
+      # ------------------------------------------------------------
+      # Cache the converted F16 GGUF
+      - name: Cache F16 GGUF
+        id: cache-f16
+        uses: actions/cache@v4
+        with:
+          path: "$GITHUB_WORKSPACE/Qwen3.5-18B-REAP-A3B-Coding-F16.gguf"
+          key: f16-gguf-${{ hashFiles('./model/*') }}
+
+      - name: Convert model to F16 GGUF (if not cached)
+        if: steps.cache-f16.outputs.cache-hit != 'true'
         run: |
           source .venv/bin/activate
-          ls $GITHUB_WORKSPACE/llama.cpp
           uv run "$GITHUB_WORKSPACE/llama.cpp/convert_hf_to_gguf.py" \
             "$GITHUB_WORKSPACE/model" \
             --outfile "$GITHUB_WORKSPACE/Qwen3.5-18B-REAP-A3B-Coding-F16.gguf" \
             --outtype f16
 
+      # ------------------------------------------------------------
       - name: Build quants
+        env:
+          HF_TOKEN: ${{ secrets.HF_TOKEN }}
         run: |
           QUANTS=(
             "Q2_K" "Q3_K_M" "Q4_0" "Q4_1" "Q4_K_M" "Q5_0" "Q5_1" "Q5_K_M" "Q6_K" "Q8_0"
           )
+
           for quant in "${QUANTS[@]}"; do
             echo "Quantizing to $quant ..."
             "$GITHUB_WORKSPACE/llama.cpp/build/bin/llama-quantize" \
-              "/home/runner/work/Qwen3.5-18B-REAP-A3B-Coding/Qwen3.5-18B-REAP-A3B-Coding/Qwen3.5-18B-REAP-A3B-Coding-F16.gguf" \
+              "$GITHUB_WORKSPACE/Qwen3.5-18B-REAP-A3B-Coding-F16.gguf" \
               "$GITHUB_WORKSPACE/gguf/Qwen3.5-18B-REAP-A3B-Coding-${quant}.gguf" \
-              ${quant}
+              "${quant}"
+
+            # Verify the file was created
+            if [ ! -f "$GITHUB_WORKSPACE/gguf/Qwen3.5-18B-REAP-A3B-Coding-${quant}.gguf" ]; then
+              echo "ERROR: Quantized file not found!"
+              echo "Contents of $GITHUB_WORKSPACE/gguf/:"
+              ls -la "$GITHUB_WORKSPACE/gguf/" || echo "Directory does not exist"
+              exit 1
+            fi
+
             echo "Uploading Qwen3.5-18B-REAP-A3B-Coding-${quant}.gguf"
             hf upload \
-              --token $HF_TOKEN \
+              --token "$HF_TOKEN" \
+              --repo-type model \
               Flagstone8878/Qwen3.5-18B-REAP-A3B-Coding-GGUF \
               "$GITHUB_WORKSPACE/gguf/Qwen3.5-18B-REAP-A3B-Coding-${quant}.gguf"
-            rm -rf "$GITHUB_WORKSPACE/gguf/Qwen3.5-18B-REAP-A3B-Coding-${quant}.gguf"
+
+            # Clean up
+            rm -f "$GITHUB_WORKSPACE/gguf/Qwen3.5-18B-REAP-A3B-Coding-${quant}.gguf"
           done
