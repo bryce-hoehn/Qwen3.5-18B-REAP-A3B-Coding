@@ -52,6 +52,7 @@ jobs:
       - name: Download model from Hugging Face
         run: |
           hf download Flagstone8878/Qwen3.5-18B-REAP-A3B-Coding \
+            --token $HF_TOKEN \
             --local-dir ./model
       
       - name: Convert model to F16 GGUF
